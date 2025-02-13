@@ -2,7 +2,7 @@
 
 ## Features of the amor-stylus-api
 
-### Model Validation for Author and Admin ✅
+### Model Validation for Post, Author and Admin ✅
 Robust Validation mechanisms that ensure data security and integrity.
 
 ### Custom JWT-Based Authentication Mechanism 🔐
