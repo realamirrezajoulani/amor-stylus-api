@@ -12,7 +12,7 @@ from utilities.auth import CSRFMiddleware
 
 
 description = """
-A simple blog API where authors can post a text but with moderate security. 🚀
+A lightweight RESTful API for a simple blog application using FastAPI and SQLModel 🚀
 """
 
 
