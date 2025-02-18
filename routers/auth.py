@@ -90,7 +90,8 @@ async def login(
     *,
     session: AsyncSession = Depends(get_session),
     response: Response,  # The HTTP response object
-    credentials: LoginRequest
+    credentials: LoginRequest,
+    request: Request
 ) -> dict[str, str]:
     """
     Endpoint for logging in a user. This route authenticates the user, generates access and refresh tokens,
@@ -150,7 +151,7 @@ async def login(
                          "and `csrf_token` cookies from the client's browser, ensuring the session is terminated.")
 @limiter.limit("10/minute")
 @limiter.limit("100/day")
-async def logout(response: Response) -> dict[str, str]:
+async def logout(request: Request, response: Response) -> dict[str, str]:
     # Delete the authentication cookies
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")

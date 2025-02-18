@@ -4,6 +4,9 @@ from os import getenv
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from redis import asyncio as aioredis
 
 # Importing models to identify them in SQLModel metadata
 from models import author_and_post, admin
@@ -32,6 +35,10 @@ async def lifespan(_: FastAPI):
     Lifespan context manager that is used to manage the initialization and cleanup tasks
     during the startup and shutdown of the FastAPI application.
     """
+
+    redis = await aioredis.from_url("redis://localhost:6379")
+    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
+
     # Initialize the database tables before starting the application
     await create_tables()
 

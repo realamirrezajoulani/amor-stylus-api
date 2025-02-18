@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi_cache.decorator import cache
 from sqlmodel import select, and_, or_, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette import status
@@ -24,12 +25,14 @@ router = APIRouter()
     description="This endpoint retrieves a list of posts with detailed information about their authors. Supports "
                 "pagination through offset and limit."
 )
+@cache(expire=300)
 @limiter.limit("100/minute")
 async def get_posts(
         *,
         session: AsyncSession = Depends(get_session),
         offset: int = Query(default=0, ge=0),
-        limit: int = Query(default=100, le=100)
+        limit: int = Query(default=100, le=100),
+        request: Request
 ) -> list[PostPublicWithAuthor]:
     """
     Fetch a paginated list of posts along with their respective authors' details.
@@ -80,6 +83,7 @@ async def create_post(
         )
     ),
     post_create: PostCreate,
+    request: Request
 ) -> PostPublicWithAuthor:
     """
     Create a new post with the specified details.
@@ -149,11 +153,13 @@ async def create_post(
     description="This endpoint fetches a specific post by its ID, including detailed information about the post's "
                 "author, if available."
 )
+@cache(expire=600)
 @limiter.limit("60/minute")
 async def get_post(
     *,
     session: AsyncSession = Depends(get_session),
-    post_id: UUID
+    post_id: UUID,
+    request: Request
 ) -> PostPublicWithAuthor:
     """
     Retrieve a specific post from the database by its ID, along with the author's information.
@@ -215,6 +221,7 @@ async def patch_post(
     ),
     post_id: UUID,
     post_update: PostUpdate,
+    request: Request
 ) -> PostPublicWithAuthor:
     """
     Update an existing post based on the provided update payload.
@@ -287,7 +294,8 @@ async def delete_post(
             UserRole.AUTHOR.value
         )
     ),
-    post_id: UUID
+    post_id: UUID,
+    request: Request
 ) -> PostPublicWithAuthor:
     """
     Delete an existing post by its ID.
@@ -338,6 +346,7 @@ async def delete_post(
             "Pagination is supported with an offset and a limit parameter, with a maximum limit of 100 results per query."
     ),
 )
+@cache(expire=60)
 @limiter.limit("50/minute")
 async def search_posts(
         *,
@@ -355,7 +364,8 @@ async def search_posts(
         like_count: int | None = None,
         operator: LogicalOperator,
         offset: int = Query(default=0, ge=0),
-        limit: int = Query(default=100, le=100)
+        limit: int = Query(default=100, le=100),
+        request: Request
 ) -> list[PostPublicWithAuthor]:
     """
     Search for posts based on various filters.
@@ -429,7 +439,7 @@ async def search_posts(
                         "will be returned.")
 @limiter.limit("20 per day")
 async def get_posts_from_author(
-    author_id: UUID,
+    *,
     session: AsyncSession = Depends(get_session),
     _user: dict = Depends(
         require_roles(
@@ -437,7 +447,9 @@ async def get_posts_from_author(
             UserRole.ADMIN.value,
             UserRole.AUTHOR.value
         )
-    )
+    ),
+    author_id: UUID,
+    request: Request
 ) -> list[Post]:
     """
     Retrieve a list of posts written by a specific author.

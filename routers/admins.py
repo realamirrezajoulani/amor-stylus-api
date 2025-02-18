@@ -1,7 +1,7 @@
 from typing import Sequence, Type
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import select, and_, or_, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette import status
@@ -12,6 +12,8 @@ from models.admin import Admin
 from schemas.admin import AdminCreate, AdminUpdate
 from utilities.auth import get_password_hash
 from utilities.enums import UserRole, LogicalOperator
+from fastapi_cache.decorator import cache
+
 
 router = APIRouter()
 
@@ -23,15 +25,18 @@ router = APIRouter()
     description="This endpoint fetches the list of admins. If the user has an admin role, it returns only the admin "
                 "data associated with that user. If the user has a 'FULL' or 'ADMIN' role, it returns all the admins."
 )
+@cache(expire=60)
 @limiter.limit("20/minute")
 async def get_admins(
+        *,
         session: AsyncSession = Depends(get_session),
         _user: dict = Depends(
             require_roles(
                 UserRole.FULL.value,
                 UserRole.ADMIN.value
             )
-        )
+        ),
+        request: Request
 ) -> Sequence[Admin]:
     """
     Endpoint to retrieve admin information based on user roles.
@@ -66,7 +71,8 @@ async def create_admin(
                 UserRole.FULL.value
             )
         ),
-        admin_create: AdminCreate
+        admin_create: AdminCreate,
+        request: Request
 ) -> Admin | HTTPException:
     """
     Endpoint to create a new admin.
@@ -110,6 +116,7 @@ async def create_admin(
         "are allowed to access any admin record, whereas users with the 'ADMIN' role can only view their own record."
     )
 )
+@cache(expire=60)
 @limiter.limit("10/minute")
 async def get_admin(
     *,
@@ -120,7 +127,8 @@ async def get_admin(
             UserRole.ADMIN.value
         )
     ),
-    admin_id: UUID
+    admin_id: UUID,
+    request: Request
 ) -> Type[Admin]:
     # Retrieve the admin record from the database using the provided unique identifier.
     admin_record = await session.get(Admin, admin_id)
@@ -159,7 +167,8 @@ async def patch_admin(
             )
         ),
         admin_id: UUID,
-        admin_update: AdminUpdate
+        admin_update: AdminUpdate,
+        request: Request
 ) -> Type[Admin]:
     """
     Update an admin's information based on their role:
@@ -221,7 +230,8 @@ async def delete_admin(
             UserRole.FULL.value,
             UserRole.ADMIN.value)
     ),
-    admin_id: UUID
+    admin_id: UUID,
+    request: Request
 ) -> Type[Admin]:
     """
     Delete an admin record based on the following rules:
@@ -259,6 +269,7 @@ async def delete_admin(
         "Only users with the 'FULL' role can perform this search."
     )
 )
+@cache(expire=60)
 @limiter.limit("10/minute")
 async def search_admins(
     *,
@@ -266,7 +277,8 @@ async def search_admins(
     _user: dict = Depends(require_roles(UserRole.FULL.value)),
     username: str | None = None,
     role: UserRole | None = None,
-    operator: LogicalOperator
+    operator: LogicalOperator,
+    request: Request
 ):
     """
     Search for admin records based on given criteria:

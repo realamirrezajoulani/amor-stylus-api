@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, HTTPException, Request
+from fastapi_cache.decorator import cache
 from pydantic import EmailStr
 from sqlmodel import select, and_, or_, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -25,6 +26,7 @@ router = APIRouter()
     summary="Retrieve a list of authors",
     description="Fetches a paginated list of authors, enriched with additional links and posts data."
 )
+@cache(expire=900)
 @limiter.limit("3/minute")
 async def get_authors(
     *,
@@ -133,6 +135,7 @@ async def create_author(
             "You need to provide the unique identifier (ID) of the author to fetch their data."
     )
 )
+@cache(expire=900)
 @limiter.limit("30/minute")
 async def get_author(
         *,
@@ -290,6 +293,7 @@ async def delete_author(
             "relevant information such as their associated posts and links."
     )
 )
+@cache(expire=60)
 @limiter.limit("50/minute")
 async def search_authors(
         *,
