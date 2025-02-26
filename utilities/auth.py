@@ -159,7 +159,6 @@ async def authenticate_user(credentials: LoginRequest, session: AsyncSession):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Username or password incorrect",
-                headers={"WWW-Authenticate": "Bearer"},
             )
         return admin_user
 
