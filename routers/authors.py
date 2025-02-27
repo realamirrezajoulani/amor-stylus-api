@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from fastapi_cache.decorator import cache
 from pydantic import EmailStr
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select, and_, or_, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette import status
@@ -116,6 +117,12 @@ async def create_author(
 
         return response_data
 
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username or email is already used, please choose another another username or email."
+        )
     except Exception as e:
         # Critical error handling with transaction rollback
         await session.rollback()

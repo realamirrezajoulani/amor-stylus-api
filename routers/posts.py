@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi_cache.decorator import cache
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select, and_, or_, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette import status
@@ -110,7 +111,7 @@ async def create_post(
     try:
         # Instantiate a new Post object with data from the post_create payload and the resolved author ID.
         db_post = Post(
-            thumbnail=post_create.thumbnail,
+            thumbnail_base64=post_create.thumbnail_base64,
             title=post_create.title,
             content=post_create.content,
             publication_status=post_create.publication_status,
@@ -139,11 +140,17 @@ async def create_post(
         # Return the enriched post data as the response.
         return post_data
 
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The provided author ID is invalid or does not exist. Please check and try again."
+        )
     except Exception as e:
         # In case of any error, rollback the session to avoid partial commits,
         # then raise an HTTPException with a 500 Internal Server Error.
         await session.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.get(
