@@ -67,8 +67,10 @@ async def swagger_ui_html(req: Request) -> HTMLResponse:
 
 
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=4)
+app.add_middleware(CSRFMiddleware)
+
 @app.middleware("http")
-async def add_xss_headers(request: Request, call_next):
+async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Expect-CT"] = "max-age=86400, enforce"
@@ -77,7 +79,7 @@ async def add_xss_headers(request: Request, call_next):
     return response
 
 # app.add_middleware(HTTPSRedirectMiddleware)
-# app.add_middleware(CSRFMiddleware)
+
 
 app.state.limiter = limiter
 app.mount("/static", StaticFiles(directory="static"), name="static")

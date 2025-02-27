@@ -6,6 +6,7 @@ from typing import Any
 
 from passlib.context import CryptContext
 from fastapi import HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -192,6 +193,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next):
+
+        if request.url.hostname == "localhost":
+            return await call_next(request)
+
         # Define HTTP methods that require CSRF protection
         csrf_protected_methods = {"POST", "PUT", "DELETE", "PATCH"}
 
@@ -202,11 +207,17 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
             # Deny the request if either the cookie or header token is missing
             if not csrf_cookie or not csrf_header:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF token missing")
+                return JSONResponse(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content={"detail": "CSRF token missing"}
+                )
 
             # Deny the request if the tokens do not match
             if csrf_cookie != csrf_header:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF token mismatch")
+                return JSONResponse(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content={"detail": "CSRF token mismatch"}
+                )
 
         # Proceed with the request processing
         response: Response = await call_next(request)
