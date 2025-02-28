@@ -207,8 +207,9 @@ async def patch_author(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found.")
 
     # If the user has the 'AUTHOR' role, ensure they can only update their own information.
-    if _user["role"] == UserRole.AUTHOR.value and id != _user["id"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot edit another author's information.")
+    if _user["role"] == UserRole.AUTHOR.value and author_id != UUID(_user["id"]):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="You cannot edit another author's information.")
 
     # Prepare the update data, excluding unset fields.
     author_data = author_update.model_dump(exclude_unset=True)
@@ -270,9 +271,9 @@ async def delete_author(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
 
     # Check if the user is trying to delete themselves or is an admin/authorized full role.
-    if _user["role"] == UserRole.AUTHOR.value:
-        if id != _user["id"]:  # An author can only delete themselves
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to delete other authors")
+    if _user["role"] == UserRole.AUTHOR.value and author_id != UUID(_user["id"]):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="You do not have permission to delete other authors")
 
     # Convert the deleted author object into a response model with the associated posts.
     author_out = AuthorPublicWithPosts.model_validate(author_to_delete)

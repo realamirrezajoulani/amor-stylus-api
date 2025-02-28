@@ -168,7 +168,7 @@ async def authenticate_user(credentials: LoginRequest, session: AsyncSession):
         result = await session.exec(query)
         author_user = result.one_or_none()
 
-        if not author_user or get_password_hash(password) != author_user.password:
+        if not author_user or not verify_password(password, author_user.password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Username or password incorrect",
